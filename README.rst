@@ -10,6 +10,20 @@ servers support and enable this SFTP access by default, so SSHFS is
 very simple to use - there's nothing to do on the server-side.
 
 
+Development Status
+------------------
+
+SSHFS is shipped by all major Linux distributions and has been in
+production use across a wide range of systems for many years. However,
+at present SSHFS does not have any active, regular contributors, and
+there are a number of known issues (see the bugtracker).  The current
+maintainer continues to apply pull requests and makes regular
+releases, but unfortunately has no capacity to do any development
+beyond addressing high-impact issues. When reporting bugs, please
+understand that unless you are including a pull request or are
+reporting a critical issue, you will probably not get a response.
+
+
 How to use
 ----------
 
@@ -32,7 +46,7 @@ To unmount the filesystem::
 
     fusermount -u mountpoint
 
-On BSD and OS-X, to unmount the filesystem::
+On BSD and macOS, to unmount the filesystem::
 
     umount mountpoint
 
@@ -42,7 +56,7 @@ Installation
 
 First, download the latest SSHFS release from
 https://github.com/libfuse/sshfs/releases. On Linux and BSD, you will
-also need to install libfuse_ 3.1.0 or newer. On OS-X, you need
+also need to install libfuse_ 3.1.0 or newer. On macOS, you need
 OSXFUSE_ instead. Finally, you need the Glib_ library with development
 headers (which should be available from your operating system's
 package manager).

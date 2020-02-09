@@ -27,21 +27,24 @@ To unmount it::
 Description
 ===========
 
-SSHFS allows you to mount a remote filesystem using SSH (more
-precisely, the SFTP subsystem). Most SSH servers support and enable
-this SFTP access by default, so SSHFS is very simple to use - there's
-nothing to do on the server-side.
+SSHFS allows you to mount a remote filesystem using SSH (more precisely, the SFTP
+subsystem). Most SSH servers support and enable this SFTP access by default, so SSHFS is
+very simple to use - there's nothing to do on the server-side.
 
-SSHFS uses FUSE (Filesystem in Userspace) and should work on any
-operating system that provides a FUSE implementation. Currently,
-this includes Linux, FreeBSD and Mac OS X.
+By default, file permissions are ignored by SSHFS. Any user that can access the filesystem
+will be able to perform any operation that the remote server permits - based on the
+credentials that were used to connect to the server. If this is undesired, local
+permission checking can be enabled with ``-o default_permissions``.
 
-It is recommended to run SSHFS as regular user (not as root).  For
-this to work the mountpoint must be owned by the user.  If username is
-omitted SSHFS will use the local username. If the directory is
-omitted, SSHFS will mount the (remote) home directory.  If you need to
-enter a password sshfs will ask for it (actually it just runs ssh
-which ask for the password if needed).
+By default, only the mounting user will be able to access the filesystem. Access for other
+users can be enabled by passing ``-o allow_others``. In this case you most likely also
+want to use ``-o default_permissions``.
+
+It is recommended to run SSHFS as regular user (not as root).  For this to work the
+mountpoint must be owned by the user.  If username is omitted SSHFS will use the local
+username. If the directory is omitted, SSHFS will mount the (remote) home directory.  If
+you need to enter a password sshfs will ask for it (actually it just runs ssh which ask
+for the password if needed).
 
 
 Options
@@ -115,6 +118,8 @@ Options
    :fstat: Work around broken servers that don't support *fstat()* by
            using *stat* instead.
    :buflimit: Work around OpenSSH "buffer fillup" bug.
+   :createmode: Work around broken servers that produce an error when passing a
+                non-zero mode to create, by always passing a mode of 0.
 
 -o idmap=TYPE
    How to map remote UID/GIDs to local values. Possible values are:
@@ -200,6 +205,27 @@ Options
    sets the interval for forced cleaning of the directory cache
    when full.
 
+-o direct_io
+   This option disables the use of page cache (file content cache) in 
+   the kernel for this filesystem.
+   This has several affects:
+
+   1. Each read() or write() system call will initiate one or more read or
+      write operations, data will not be cached in the kernel.
+
+   2. The return value of the read() and write() system calls will correspond 
+      to the return values of the read and write operations. This is useful 
+      for example if the file size is not known in advance (before reading it).
+      e.g. /proc filesystem 
+
+-o max_conns=N
+   sets the maximum number of simultaneous SSH connections
+   to use. Each connection is established with a separate SSH process.
+   The primary purpose of this feature is to improve the responsiveness of the
+   file system during large file transfers. When using more than once
+   connection, the *password_stdin* and *slave* options can not be
+   used, and the *buflimit* workaround is not supported/
+
 In addition, SSHFS accepts several options common to all FUSE file
 systems. These are described in the `mount.fuse` manpage (look
 for "general", "libfuse specific", and "high-level API" options).
@@ -241,8 +267,8 @@ errors which will make programs like `mv(1)` attempt to actually move the
 file after the failed rename.
 
 
-SSHFS hangs
-~~~~~~~~~~~
+SSHFS hangs for no apparent reason
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In some cases, attempts to access the SSHFS mountpoint may freeze if
 no filesystem activity has occured for some time. This is typically
@@ -250,6 +276,34 @@ caused by the SSH connection being dropped because of inactivity
 without SSHFS being informed about that. As a workaround, you can try
 to mount with ``-o ServerAliveInterval=15``. This will force the SSH
 connection to stay alive even if you have no activity.
+
+
+SSHFS hangs after the connection was interrupted
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, network operations in SSHFS run without timeouts, mirroring the
+default behavior of SSH itself. As a consequence, if the connection to the
+remote host is interrupted (e.g. because a network cable was removed),
+operations on files or directories under the mountpoint will block until the
+connection is either restored or closed altogether (e.g. manually).
+Applications that try to access such files or directories will generally appear
+to "freeze" when this happens.
+
+If it is acceptable to discard data being read or written, a quick workaround
+is to kill the responsible ``sshfs`` process, which will make any blocking
+operations on the mounted filesystem error out and thereby "unfreeze" the
+relevant applications. Note that force unmounting with ``fusermount -zu``, on
+the other hand, does not help in this case and will leave read/write operations
+in the blocking state.
+
+For a more automatic solution, one can use the ``-o ServerAliveInterval=15``
+option mentioned above, which will drop the connection after not receiving a
+response for 3 * 15 = 45 seconds from the remote host. By also supplying ``-o
+reconnect``, one can ensure that the connection is re-established as soon as
+possible afterwards. As before, this will naturally lead to loss of data that
+was in the process of being read or written at the time when the connection was
+interrupted.
+
 
 Mounting from /etc/fstab
 ========================

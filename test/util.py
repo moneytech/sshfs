@@ -20,13 +20,19 @@ def wait_for_mount(mount_process, mnt_dir,
         elapsed += 0.1
     pytest.fail("mountpoint failed to come up")
 
-def cleanup(mnt_dir):
+def cleanup(mount_process, mnt_dir):
     subprocess.call(['fusermount', '-z', '-u', mnt_dir],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)
+    mount_process.terminate()
+    try:
+        mount_process.wait(1)
+    except subprocess.TimeoutExpired:
+        mount_process.kill()
+    
 
 def umount(mount_process, mnt_dir):
-    subprocess.check_call(['fusermount', '-z', '-u', mnt_dir ])
+    subprocess.check_call(['fusermount3', '-z', '-u', mnt_dir ])
     assert not os.path.ismount(mnt_dir)
 
     # Give mount process a little while to terminate. Popen.wait(timeout)

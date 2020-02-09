@@ -33,13 +33,17 @@ def name_generator(__ctr=[0]):
 @pytest.mark.parametrize("debug", (False, True))
 @pytest.mark.parametrize("cache_timeout", (0,1))
 @pytest.mark.parametrize("sync_rd", (True, False))
-def test_sshfs(tmpdir, debug, cache_timeout, sync_rd, capfd):
+@pytest.mark.parametrize("multiconn", (True,False))
+def test_sshfs(tmpdir, debug, cache_timeout, sync_rd, multiconn, capfd):
     
     # Avoid false positives from debug messages
     #if debug:
     #    capfd.register_output(r'^   unique: [0-9]+, error: -[0-9]+ .+$',
     #                          count=0)
 
+    # Avoid false positives from storing key for localhost 
+    capfd.register_output(r"^Warning: Permanently added 'localhost' .+", count=0)
+    
     # Test if we can ssh into localhost without password
     try:
         res = subprocess.call(['ssh', '-o', 'KbdInteractiveAuthentication=no',
@@ -74,6 +78,8 @@ def test_sshfs(tmpdir, debug, cache_timeout, sync_rd, capfd):
     cmdline += [ '-o', 'entry_timeout=0',
                  '-o', 'attr_timeout=0' ]
 
+    if multiconn:
+        cmdline += [ '-o', 'max_conns=3' ]
     
     new_env = dict(os.environ) # copy, don't modify
 
@@ -102,13 +108,14 @@ def test_sshfs(tmpdir, debug, cache_timeout, sync_rd, capfd):
         # SSHFS only supports one second resolution when setting
         # file timestamps.
         tst_utimens(mnt_dir, tol=1)
+        tst_utimens_now(mnt_dir)
 
         tst_link(mnt_dir, cache_timeout)
         tst_truncate_path(mnt_dir)
         tst_truncate_fd(mnt_dir)
         tst_open_unlink(mnt_dir)
     except:
-        cleanup(mnt_dir)
+        cleanup(mount_process, mnt_dir)
         raise
     else:
         umount(mount_process, mnt_dir)
@@ -402,6 +409,18 @@ def tst_utimens(mnt_dir, tol=0):
     if sys.version_info >= (3,3):
         assert abs(fstat.st_atime_ns - atime_ns) < tol*1e9
         assert abs(fstat.st_mtime_ns - mtime_ns) < tol*1e9
+
+def tst_utimens_now(mnt_dir):
+    fullname = pjoin(mnt_dir, name_generator())
+
+    fd = os.open(fullname, os.O_CREAT | os.O_RDWR)
+    os.close(fd)
+    os.utime(fullname, None)
+
+    fstat = os.lstat(fullname)
+    # We should get now-timestamps
+    assert fstat.st_atime != 0
+    assert fstat.st_mtime != 0
 
 def tst_passthrough(src_dir, mnt_dir, cache_timeout):
     name = name_generator()

@@ -1,3 +1,62 @@
+Release 3.7.0 (2020-01-03)
+--------------------------
+
+* New max_conns option enables the use of multiple connections to improve responsiveness
+  during large file transfers. Thanks to Timo Savola for doing most of the implementation
+  work, and thanks to CEA.fr for sponsoring remaining bugfixes and cleanups!
+
+* The `buflimit` workaround is now disabled by default. The corresponding bug in OpenSSH
+  has been fixed in 2007
+  (cf. https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=365541#37), so this shouldn't be
+  needed anymore. If you depend on this workaround, please let the SSHFS maintainers know,
+  otherwise support for the workaround will be removed completely in a future version.
+
+  
+Release 3.6.0 (2019-11-03)
+--------------------------
+
+* Added "-o direct_io" option.
+  This option disables the use of page cache in kernel.
+  This is useful for example if the file size is not known before reading it.
+  For example if you mount /proc dir from a remote host without the direct_io
+  option, the read always will return zero bytes instead of actual data.
+* Added --verbose option.
+* Fixed a number of compiler warnings.
+* Improved performance under OS X.
+
+
+Release 3.5.2 (2019-04-13)
+--------------------------
+
+* Fixed "-o idmap=user" to map both UID and GID on all OSs.
+* Fixed improper handling of sequential spaces spaces in "ssh_command" option
+
+Release 3.5.1 (2018-12-22)
+--------------------------
+
+* Documentation updates
+* Build system updates
+* Added "BindInterface" as valid "-o" option.
+
+Release 3.5.0 (2018-08-28)
+--------------------------
+
+* Fixed error code returned by rename(), allowing proper fallback.
+* Port to Cygwin.
+
+Release 3.4.0 (2018-06-29)
+--------------------------
+
+* Make utimens(NULL) result in timestamp "now" -- no more touched files
+  dated 1970-01-01
+* New `createmode` workaround.
+* Fix `fstat` workaround regression.
+
+Release 3.3.2 (2018-04-29)
+--------------------------
+
+* New `renamexdev` workaround.
+
 Release 3.3.1 (2017-10-25)
 --------------------------
 

@@ -1,5 +1,5 @@
-project('sshfs', 'c', version: '3.3.1',
-        meson_version: '>= 0.38',
+project('sshfs', 'c', version: '3.7.0',
+        meson_version: '>= 0.40',
         default_options: [ 'buildtype=debugoptimized' ])
 
 add_global_arguments('-D_REENTRANT', '-DHAVE_CONFIG_H',
@@ -25,7 +25,7 @@ if not cc.compiles(code, args: [ '-O0', '-Werror=unused-result' ])
 endif
 
 
-rst2man = find_program('rst2man', required: false)
+rst2man = find_program('rst2man', 'rst2man.py', required: false)
   
 cfg = configuration_data()
 
